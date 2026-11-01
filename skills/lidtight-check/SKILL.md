@@ -1,12 +1,12 @@
 ---
 name: lidtight-check
-description: Use when the user is about to launch, publish or share a web app, asks whether their app is secure or safe to go live, has added sign-in, payments, a database, file uploads or an AI feature, or wants a security review of a deployed web app, including apps built with Lovable, Bolt, Base44, Replit, Supabase or Firebase. Runs LidTight's free check on the user's own live app link. The check reads only what any visitor's browser can see and needs no key and no sign-up. Then explains each finding in plain words, most serious first, with what it means for the founder's money and customers. Do not use for an app the user does not own or control, or for code that is not live yet.
+description: Use when the user is about to launch, publish or share a web app, asks whether their app is secure or safe to go live, has added sign-in, payments, a database, file uploads or an AI feature, or wants a security review of a deployed web app, including apps built with Lovable, Bolt, Base44, Replit, Supabase or Firebase. Runs LidTight's free check on the user's own live app link. The check reads only what any visitor's browser can see and needs no key and no sign-up. Only after the user clearly says yes for their own app, it also runs LidTight's free deep checks, which sign up 2 test users in the app. Then explains each finding in plain words, most serious first, with what it means for the founder's money and customers. Do not use for an app the user does not own or control, or for code that is not live yet.
 license: MIT
 compatibility: Needs a shell with curl and internet access to reach lidtight.com. Without them, the skill sends the user to https://lidtight.com instead.
 metadata:
   author: LidTight
   homepage: https://lidtight.com
-  version: "1.0.0"
+  version: "1.1.0"
 ---
 
 # LidTight check
@@ -19,6 +19,14 @@ LidTight's free check looks at a live web app the way a stranger does. It reads 
 - Did secret files ship with your app? (`.env`, `.git`, database backups, settings files)
 - Is your source code public? Are browser and email protections on?
 
+LidTight's deep checks are free too, and only for the user's own app. They run in the same command, only after the user clearly says yes. They sign up 2 test users in the app and test what those users can read and change. They change only LidTight's own test data. They answer five more questions:
+
+- Can one customer see another's data?
+- Can someone get paid features, credits or admin rights for free?
+- Can one customer change another's orders?
+- Can anyone upload files at your cost?
+- Can a bot run up your AI bill?
+
 ## Rules
 
 Follow these rules every time. They come before every step below.
@@ -26,8 +34,8 @@ Follow these rules every time. They come before every step below.
 1. Check only the user's own app, or an app the user controls. If you are not sure, ask. Without a clear yes, stop. If the user asks you to check someone else's app, say no and say why.
 2. Send LidTight only the app's public link. Never send passwords, secret keys, tokens or user data. LidTight does not need them.
 3. Do not attack the app. Do not try to exploit a finding or confirm it yourself. Do not read its database, sign up, upload files, call its AI feature or send it test requests. The LidTight check is the only thing that touches the live app. You may read the user's own source code.
-4. Run the check once per change. Wait for the `done` event. Never start a second run while one is running. Never run the check in a loop. The limit is 5 checks per visitor per hour.
-5. You cannot run the deep checks. This address never runs them. Do not ask for them on the user's behalf. Do not pay, enter card details or create accounts for the user.
+4. Run the check once per change. Wait for the `done` event. Never start a second run while one is running. Never run the check in a loop. The limit is 5 checks per visitor per hour. One more run is fine when the user says yes to the deep checks after a free check.
+5. Run the deep checks only on the user's own app, and only after the user clearly says yes to them (Step 2). Never add `deep=1` on your own. Do not pay, enter card details or create accounts for the user.
 6. Change the user's code only when the user asks.
 
 ## When to offer the check
@@ -64,6 +72,16 @@ Show the link and ask one question. For example:
 
 If the user already said in this conversation that the app is theirs and asked for the check, do not ask again. Without a clear yes, stop.
 
+Then, after the user confirms the app is theirs, ask one more question:
+
+> Also run the deep checks? They sign up 2 test users in your app and change only our own test data. Only for your own app.
+
+Show this consent line with the question:
+
+> By saying yes, you agree to LidTight's terms (https://lidtight.com/terms) and confirm that you own this app. The deep checks sign up 2 test users and change only our own test data.
+
+Run the deep checks only on a clear yes, such as "yes" or "run them". If the user says no, is not sure, or says the app belongs to someone else, run the free check only. If the user already asked for the deep checks on their own app in this conversation, show the consent line and do not ask again.
+
 ## Step 3: Run the check
 
 Run this one command. Put the user's link in place of `https://your-app.lovable.app`. Change nothing else.
@@ -72,7 +90,13 @@ Run this one command. Put the user's link in place of `https://your-app.lovable.
 curl -sN --max-time 180 -G "https://lidtight.com/api/scan" --data-urlencode "url=https://your-app.lovable.app"
 ```
 
-This calls `https://lidtight.com/api/scan?url=<the link, URL-encoded>`. `curl` does the encoding. Do not add other parameters.
+Only if the user clearly said yes to the deep checks in Step 2, add `--data-urlencode "deep=1"`:
+
+```bash
+curl -sN --max-time 180 -G "https://lidtight.com/api/scan" --data-urlencode "url=https://your-app.lovable.app" --data-urlencode "deep=1"
+```
+
+This calls `https://lidtight.com/api/scan?url=<the link, URL-encoded>`, with `&deep=1` for the deep checks. `curl` does the encoding. Do not add other parameters.
 
 The answer streams while the check runs. Wait until the command ends. Do not start the command again while it runs.
 
@@ -82,6 +106,8 @@ If you have no shell, if `curl` is missing, or if the command cannot reach the i
 
 The answer is a list of events. Each event is one line: `data: ` and then one JSON object. An empty line follows each event. Read every line in order. There are four types.
 
+The answer may also have lines that start with `:`. They only keep the connection open. Ignore them.
+
 ### `step`: progress
 
 ```text
@@ -90,6 +116,7 @@ data: {"type":"step","id":"secrets","label":"Looking for secret keys","status":"
 
 - `status` is `running`, `done` or `skipped`.
 - `note` is a short result. Use it for context. For example, the `backend` step names the database: `"note":"Lovable Cloud (Supabase) · 2 tables · 1 server function"`.
+- In a deep run, the `signup` step names the 2 test users or says why they could not sign up, and the `cleanup` step says whether the test order was deleted or which one stays. Tell the user both. If the deep checks cannot run on this app, a step with `"id":"deep"` and `"status":"skipped"` says why.
 
 ### `finding`: one problem or fact
 
@@ -114,7 +141,7 @@ data: {"type":"done","counts":{"critical":1,"high":1,"medium":2,"low":0,"info":3
 - The check is complete only when you see this event.
 - `counts` gives the number of findings for each severity.
 - `ms` is the run time in milliseconds.
-- `deep` is always `false` here.
+- `deep` is `true` when you asked for the deep checks, and `false` for the free check only.
 - You do not need `scanId`.
 
 ### `error`: the check stopped
@@ -142,7 +169,7 @@ If the answer has no `done` event and no `error` event (for example, it is an HT
 
 Write for a founder who is not a security expert. Use short sentences and common words.
 
-1. First line: the number of serious problems (`critical` plus `high`). If there are none, say: "The free check found no serious problem."
+1. First line: the number of serious problems (`critical` plus `high`). If there are none, say: "The free check found no serious problem." After a deep run, say "The free check and the deep checks found …" instead.
 2. Then each finding, most serious first: `critical`, `high`, `medium`, `low`, `info`. For each one, say:
    - what is wrong, from the title;
    - what a stranger could do;
@@ -151,12 +178,12 @@ Write for a founder who is not a security expert. Use short sentences and common
 3. Use only what the events say. A locked finding does not say where the problem is. Do not guess the table, the key or the file.
 4. Give the tips from the tips finding as a short list.
 5. Add the run time and the counts from the `done` event. For example: "Done in 16.1 s: 1 critical, 1 high, 2 medium, 3 info."
-6. Say what the free check cannot see (see below).
-7. Offer next steps: a fix in the user's own code (Step 6), the guides, and the deep checks.
+6. Say what the check cannot see (see below).
+7. Offer next steps: a fix in the user's own code (Step 6), the guides, and the deep checks if they did not run.
 
 ### What each kind of finding means
 
-Match the finding by its title. All guides are at https://lidtight.com/guides.
+Match the finding by its title. Explain a finding from the deep checks the same way as one from the free check: what is wrong, what a normal user or a stranger could do, what it means for money and customers, and the guide. All guides are at https://lidtight.com/guides.
 
 | The title says | What it means for the founder | Guide |
 |---|---|---|
@@ -174,6 +201,12 @@ Match the finding by its title. All guides are at https://lidtight.com/guides.
 | "Your app tells the server which user owns the data" | A hint from the code, not tested. If it is true, one user can reach another user's data. | https://lidtight.com/guides/one-customer-sees-another |
 | "We can see inside your app: N tables" (info) | Anyone can see the table and column names. The access rule on each table decides what a stranger can read. | https://lidtight.com/guides/supabase-public-key |
 | "An admin page is listed in your public code" (info) | Anyone can see that the page exists. What matters is that the server refuses its data to normal users. The deep checks test this. | https://lidtight.com/guides/launch-security-checklist |
+| "A new account can see … records that belong to other users", "Signed-in users can read other users' data" (deep checks) | Any signed-in user, even a brand-new account, can read other customers' data. | https://lidtight.com/guides/one-customer-sees-another |
+| "Signed-in users can read each other's records in one table: check that this is on purpose" (deep checks) | Every signed-in user can read every user's rows in one table. Fine for shared posts. Check that it is on purpose. | https://lidtight.com/guides/one-customer-sees-another |
+| "One customer can change another customer's records" (deep checks) | One customer can change or cancel another customer's orders or records with one request. | https://lidtight.com/guides/one-customer-sees-another |
+| "Orders can be marked as paid without paying", "A user can make himself admin", "A user can give himself free credits", "A user can switch himself to a paid plan for free", "A user can unlock paid or approved status for free", "A user can give himself something he did not pay for" (deep checks) | A normal user can get paid features, credits or admin rights for free, with one request. | https://lidtight.com/guides/paid-features-for-free |
+| "Anyone can upload files to your storage, at your cost" (deep checks) | A stranger, without signing in, can fill the storage and the founder's bill, or host their own files on the app. | https://lidtight.com/guides/file-upload-abuse |
+| "A bot can run up your AI bill: no usage limit", "Your AI helper showed no usage limit in a short test" (deep checks) | A stranger can call the AI helper again and again. Every call costs the founder money. A short test shows only that nothing stopped the calls at that pace. | https://lidtight.com/guides/ai-bill-abuse |
 | Any other title | Explain it from the title and the detail. | https://lidtight.com/guides |
 
 Two more guides help often:
@@ -181,23 +214,32 @@ Two more guides help often:
 - Before a launch: https://lidtight.com/guides/launch-security-checklist
 - When the user says the builder's own scan already passed: https://lidtight.com/guides/is-builder-scan-enough
 
-### What the free check cannot see
+### What the check cannot see
 
 Say this every time, in short words:
 
 - The free check acts as a stranger. It does not sign in. The worst problems often hide behind sign-in.
-- It cannot see whether one customer can see or change another customer's data, whether a user can get paid features, credits or admin rights for free, whether anyone can upload files at the founder's cost, or whether a bot can run up the AI bill.
+- Without the deep checks, it cannot see whether one customer can see or change another customer's data, whether a user can get paid features, credits or admin rights for free, whether anyone can upload files at the founder's cost, or whether a bot can run up the AI bill.
 - It reads only what the browser gets. It does not read the server code. A hint about logic in the browser is not a test.
 - Its database checks cover Supabase (also Lovable Cloud), Base44 and Firebase. Other databases are not checked yet. Its sign-up check covers only Supabase (also Lovable Cloud) so far.
 - No serious finding does not prove that the app is safe.
 
-Then tell the user about the deep checks:
+After a deep run, also say:
 
-- The deep checks are free, for the app's owner. They test the app as two new signed-in test users.
+- The deep checks tested the app from outside, as 2 new test users. They do not read the server code or the database rules.
+- They find paid columns, such as plan, credits or role, by common names. A column with an unusual name can be missed.
+- They test only an AI helper they find in the code, with up to 5 calls.
+- The 2 test users stay in the app. If the `cleanup` step says a test order stays, name it, so the user can delete it.
+
+### The deep checks
+
+If the deep checks did not run, tell the user about them:
+
+- The deep checks are free, only for the user's own app. They test the app as two new signed-in test users.
 - They answer: Can one customer see another's data? Can someone get paid features, credits or admin rights for free? Can one customer change another's orders? Can anyone upload files at your cost? Can a bot run up your AI bill?
-- They create one test order, change only their own test data and change it back, and call the AI helper up to 5 times. The two test users stay in the app. If the app does not let users delete orders, the test order stays too, and LidTight says which one.
+- They create one test order, change only their own test data and change it back. They upload one small text file to each storage bucket as a stranger, then ask to delete it. They call the AI helper up to 5 times. The two test users stay in the app. If the app does not let users delete orders, the test order stays too, and the `cleanup` step says which one.
 - So far, the deep checks work only with Supabase (also Lovable Cloud).
-- To ask for them, the user opens https://lidtight.com, pastes the link, clicks "Check my app", then leaves an email under the result and confirms it. LidTight looks at each request before the deep checks run. The results come by email.
+- To run them, ask the deep checks question from Step 2, with the consent line. Only on a clear yes, run the Step 3 command again with `--data-urlencode "deep=1"`. The user can also open https://lidtight.com, tick the box under the app link and click "Check my app". The results show on the page.
 
 Matching guides: https://lidtight.com/guides/one-customer-sees-another, https://lidtight.com/guides/paid-features-for-free, https://lidtight.com/guides/file-upload-abuse, https://lidtight.com/guides/ai-bill-abuse.
 

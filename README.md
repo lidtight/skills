@@ -1,6 +1,6 @@
 # LidTight skills
 
-This repository holds one Agent Skill, `lidtight-check`, for AI coding agents such as Claude Code, Codex, Cursor and Lovable. With it, the agent runs the free check from [LidTight](https://lidtight.com) on your own live web app and explains the result in plain words. LidTight checks apps built with AI tools such as Lovable, Bolt, Base44 and Replit. The free check reads only what any visitor's browser can see. It needs no key and no sign-up, and it takes from a few seconds to about a minute. The skill follows the open [Agent Skills format](https://agentskills.io/specification).
+This repository holds one Agent Skill, `lidtight-check`, for AI coding agents such as Claude Code, Codex, Cursor and Lovable. With it, the agent runs the free check from [LidTight](https://lidtight.com) on your own live web app and explains the result in plain words. If you clearly say yes, it also runs the free deep checks on your own app. LidTight checks apps built with AI tools such as Lovable, Bolt, Base44 and Replit. The free check reads only what any visitor's browser can see. It needs no key and no sign-up, and it takes from a few seconds to about a minute. The skill follows the open [Agent Skills format](https://agentskills.io/specification).
 
 ```text
 .
@@ -93,7 +93,11 @@ Docs: [Skills in Lovable](https://docs.lovable.dev/features/skills).
 
 The free check counts records and never keeps customer data. For a serious problem, it shows what is wrong and how serious, not where.
 
-The skill never runs the deep checks. They are free, for the app's owner, and test the app as two signed-in test users: Can one customer see another's data? Can someone get paid features, credits or admin rights for free? Can one customer change another's orders? Can anyone upload files at your cost? Can a bot run up your AI bill? To ask for them, run the check at [lidtight.com](https://lidtight.com), leave your email under the result and confirm it. LidTight looks at each request before the deep checks run.
+## The deep checks
+
+The deep checks are free too, and only for your own app. They test the app as two signed-in test users: Can one customer see another's data? Can someone get paid features, credits or admin rights for free? Can one customer change another's orders? Can anyone upload files at your cost? Can a bot run up your AI bill?
+
+After you confirm that the app is yours, the skill asks one more question: "Also run the deep checks? They sign up 2 test users in your app and change only our own test data. Only for your own app." It shows the consent line with it. Only on a clear yes, it adds `deep=1` to the same command. The deep checks sign up 2 test users and create one test order in your app, and change only that test data. They upload one small text file to each storage bucket, then ask to delete it, and call your AI helper up to 5 times. The test users stay in your app. The test order stays too if your app does not let users delete it. On [lidtight.com](https://lidtight.com), the same choice is a box under the app link.
 
 ## Safety rules
 
@@ -103,12 +107,13 @@ The skill tells the agent to:
 - send LidTight only the app's public link, never passwords, secret keys, tokens or user data;
 - never attack the app, and never try to exploit or confirm a finding itself;
 - run the check once per change, wait for the result, and never run it in a loop: the limit is 5 checks per visitor per hour;
-- never ask for the deep checks for you, never pay, enter card details or create accounts for you;
+- run the deep checks only on your own app, and only after you clearly say yes;
+- never pay, enter card details or create accounts for you;
 - change your code only when you ask.
 
 ## How it works
 
-The skill calls `https://lidtight.com/api/scan?url=<your app's live link, URL-encoded>`. The answer is a stream of `data: {json}` lines with the event types `step`, `finding`, `done` and `error`. The agent reads the stream until the `done` event, then explains each finding, most serious first, and links the matching guide. If the agent has no shell or no network, it sends you to [lidtight.com](https://lidtight.com) instead.
+The skill calls `https://lidtight.com/api/scan?url=<your app's live link, URL-encoded>`, with `&deep=1` only after your yes to the deep checks. The answer is a stream of `data: {json}` lines with the event types `step`, `finding`, `done` and `error`. Lines that start with `:` only keep the connection open, and the agent ignores them. The agent reads the stream until the `done` event, then explains each finding, most serious first, and links the matching guide. If the agent has no shell or no network, it sends you to [lidtight.com](https://lidtight.com) instead.
 
 ## Links
 
