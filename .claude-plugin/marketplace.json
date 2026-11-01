@@ -1,0 +1,16 @@
+{
+  "name": "lidtight",
+  "description": "LidTight's skills for AI coding agents.",
+  "owner": {
+    "name": "LidTight",
+    "url": "https://lidtight.com"
+  },
+  "plugins": [
+    {
+      "name": "lidtight",
+      "source": "./",
+      "description": "Run LidTight's free security check on your own live web app and explain the result in plain words.",
+      "category": "security"
+    }
+  ]
+}

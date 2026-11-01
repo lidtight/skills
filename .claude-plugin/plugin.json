@@ -1,0 +1,14 @@
+{
+  "name": "lidtight",
+  "displayName": "LidTight",
+  "version": "1.0.0",
+  "description": "Run LidTight's free security check on your own live web app and explain the result in plain words.",
+  "author": {
+    "name": "LidTight",
+    "url": "https://lidtight.com"
+  },
+  "homepage": "https://lidtight.com",
+  "repository": "https://github.com/lidtight/skills",
+  "license": "MIT",
+  "keywords": ["security", "launch", "lovable", "bolt", "base44", "replit", "supabase", "firebase"]
+}
